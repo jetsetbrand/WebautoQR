@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Auto - Secure Payment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+
+    <style>
+        /* Logo slider animation */
+        .logo-slider { display: flex; width: fit-content; animation: slide 25s linear infinite; }
+        @keyframes slide { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
+
+        /* Input number spinner removal */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* QR code element styling */
+        #qrcode canvas, #qrcode svg { display: block; width: 100% !important; height: 100% !important; }
+
+        /* Body layout */
+        html, body { height: 100%; overflow-x: hidden; }
+        body { display: flex; flex-direction: column; }
+        .main-content-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+
+        /* --- Display Area Layout --- */
+        #display-area {
+            min-height: 300px; /* Increased min-height for larger QR */
+            /* sm:min-height: 340px; */ /* Adjusted breakpoint if needed */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align content to top */
+            padding-top: 1rem;
+        }
+
+        /* QR Code Container Styles */
+         #qrcode-container {
+            padding: 8px; /* p-2 */
+            background-color: #f3f4f6; /* bg-gray-100 */
+            border-radius: 8px; /* rounded-lg */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1); /* shadow-inner */
+            /* Size set dynamically by JS for the inner #qrcode div */
+            margin-bottom: 0; /* Keep close to GIF */
+            display: inline-block; /* Fit content */
+         }
+         /* Inner div where QR code is drawn */
+         #qrcode {
+            border-radius: 6px;
+            /* Width and Height set by JS */
+         }
+
+         /* Bottom GIF Container Styles */
+         #bottom-gif-container {
+            width: 80%; /* Adjust width as needed */
+            max-width: 280px; /* Slightly increased max width */
+            margin-top: 0.5rem; /* Increased top margin slightly */
+         }
+         #bottom-gif-container img {
+             width: 100%;
+             height: auto;
+             object-fit: contain;
+         }
+
+    </style>
+    <script>
+        // Tailwind config (can be removed if not customizing)
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-sky-100 to-indigo-200 font-sans">
+
+    <div class="main-content-area p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full sm:max-w-md text-center overflow-hidden z-20 relative">
+            <header class="bg-indigo-600 p-4 sm:p-5">
+                <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                    Web Auto Payment
+                </h1>
+            </header>
+
+            <main class="p-5 sm:p-6">
+                <section class="mb-6">
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Enter Amount (INR)</label>
+                    <input type="number" id="amount" name="amount" placeholder="e.g., 1500.00" min="1" step="0.01" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center text-lg transition duration-150 ease-in-out">
+
+                    <button id="generate-qr"
+                            class="mt-5 w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out transform active:scale-95">
+                        Generate Payment QR
+                    </button>
+                </section>
+
+                <section id="display-area" class="mb-6 hidden">
+                    <h2 id="display-title" class="text-lg font-semibold text-gray-800 mb-1"></h2>
+                    <p id="display-message" class="text-xs sm:text-sm text-gray-600 mb-3"></p>
+
+                    <div id="qrcode-container" class="hidden">
+                         <div id="qrcode" class="bg-white flex items-center justify-center rounded overflow-hidden">
+                             <span id="qr-placeholder" class="text-gray-400 text-xs sm:text-sm px-2">QR Code will appear here</span>
+                         </div>
+                    </div>
+
+                    <div id="bottom-gif-container" class="hidden">
+                         <img id="bottom-gif" src="https://cdn.dribbble.com/userupload/23148934/file/original-92092ca2c6eff53b86b810e1a2f9b88a.gif" alt="Payment Success Animation">
+                    </div>
+
+                </section>
+
+
+                <section class="mt-8 pt-5 border-t border-gray-200">
+                    <h3 class="text-base font-medium text-gray-700 mb-4">We Accept</h3>
+                    <div class="w-full overflow-hidden relative h-10 sm:h-12 mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);">
+                        <div class="logo-slider">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1200px-PhonePe_Logo.svg.png" alt="PhonePe" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=PhonePe'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/1200px-Google_Pay_Logo.svg.png" alt="Google Pay" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=GPay'; this.onerror=null;">
+                            <img src="https://tradebrains.in/wp-content/uploads/2021/12/1200px-Paytm_Logo_standalone.svg.png" alt="Paytm" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=Paytm'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/BHIM_logo.svg/1200px-BHIM_logo.svg.png" alt="BHIM UPI" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=BHIM'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Amazon_Pay_logo.svg/1200px-Amazon_Pay_logo.svg.png" alt="Amazon Pay" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=AmazonPay'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1200px-PhonePe_Logo.svg.png" alt="PhonePe" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=PhonePe'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/1200px-Google_Pay_Logo.svg.png" alt="Google Pay" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=GPay'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo.svg/1200px-Paytm_Logo.svg.png" alt="Paytm" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=Paytm'; this.onerror=null;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/BHIM_logo.svg/1200px-BHIM_logo.svg.png" alt="BHIM UPI" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=BHIM'; this.onerror=null;">
+                            <img src="https://www.guidance.com/hs-fs/hubfs/amazonpay-logo-rgb_clr.png?width=1200&height=231&name=amazonpay-logo-rgb_clr.png" alt="Amazon Pay" class="h-6 sm:h-8 mx-5 object-contain flex-shrink-0" onerror="this.src='https://placehold.co/100x40/cccccc/ffffff?text=AmazonPay'; this.onerror=null;">
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <footer class="text-center text-xs text-indigo-100 p-4 relative z-0">
+        &copy; <span id="year"></span> Web Auto. All rights reserved.
+    </footer>
+
+    <script>
+        try {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log("DOM Loaded");
+                // --- DOM References ---
+                const amountInput = document.getElementById('amount');
+                const generateBtn = document.getElementById('generate-qr');
+                const displayArea = document.getElementById('display-area');
+                const displayTitle = document.getElementById('display-title');
+                const displayMessage = document.getElementById('display-message');
+                const qrCodeContainer = document.getElementById('qrcode-container');
+                const qrCodeDiv = document.getElementById('qrcode');
+                const qrPlaceholder = document.getElementById('qr-placeholder');
+                const bottomGifContainer = document.getElementById('bottom-gif-container');
+                const yearSpan = document.getElementById('year');
+
+                yearSpan.textContent = new Date().getFullYear();
+                let qrCodeInstance = null;
+
+                // --- Generate Button Click Handler ---
+                generateBtn.addEventListener('click', () => {
+                    console.log("Generate QR clicked.");
+
+                    const amount = parseFloat(amountInput.value).toFixed(2);
+                    if (isNaN(amount) || amount <= 0) {
+                        alert('Please enter a valid positive amount.');
+                        amountInput.focus(); return;
+                    }
+
+                    // --- Hide previous results and show display area ---
+                    qrCodeContainer.classList.add('hidden');
+                    bottomGifContainer.classList.add('hidden');
+                    qrPlaceholder.style.display = 'block';
+                    qrCodeDiv.innerHTML = '';
+                    displayArea.classList.remove('hidden');
+                    displayTitle.textContent = "Scan to Pay";
+                    displayMessage.textContent = "Scan using any UPI app";
+
+                    // --- Generate QR Code ---
+                    const payeeAddress = '9081797777@ybl';
+                    const payeeName = 'VIRENDRASINH%20ANOPSINH%20JADEJA';
+                    const merchantCode = '0000';
+                    const transactionNote = 'Payment%20for%20services';
+                    const currency = 'INR';
+                    const upiString = `upi://pay?pa=${payeeAddress}&pn=${payeeName}&mc=${merchantCode}&mode=02&purpose=00&am=${amount}&tn=${transactionNote}&cu=${currency}`;
+
+                    try {
+                        qrPlaceholder.style.display = 'none';
+                        // --- Increased QR Size ---
+                        const qrSize = window.innerWidth < 640 ? 224 : 280; // Increased base sizes
+                        console.log(`Calculated QR Size: ${qrSize}px`);
+
+                        // Set inner QR div size - container size adjusts via padding
+                        qrCodeDiv.style.width = `${qrSize}px`;
+                        qrCodeDiv.style.height = `${qrSize}px`;
+
+                        const qrCodeOptions = {
+                            width: qrSize, height: qrSize, type: 'svg', data: upiString,
+                            // ============================================================
+                            // == IMPORTANT: Replace this with your PUBLIC logo URL! ==
+                            // ============================================================
+                            image: 'https://pbs.twimg.com/media/GpRi7kYWgAEqxR6?format=jpg&name=large', // Example: 'https://your-site.com/path/to/wb_logo.jpg'
+                            dotsOptions: { color: '#4a00e0', type: 'classy-rounded', gradient: { type: 'linear', rotation: 90, colorStops: [ { offset: 0, color: '#4a00e0' }, { offset: 1, color: '#8e2de2' } ] } },
+                            backgroundOptions: { color: '#ffffff' },
+                            imageOptions: {
+                                crossOrigin: 'anonymous',
+                                margin: 5,
+                                // --- Adjusted Logo Size ---
+                                imageSize: 0.5 // Increased logo size slightly (0.8 is often too large)
+                            },
+                            cornersSquareOptions: { type: "dot", color: "#8e2de2" },
+                            cornersDotOptions: { type: "dot", color: "#4a00e0" },
+                            qrOptions: { errorCorrectionLevel: 'H' }
+                        };
+
+                        qrCodeInstance = new QRCodeStyling(qrCodeOptions);
+                        qrCodeInstance.append(qrCodeDiv);
+                        console.log("QR Code Generated and Appended.");
+
+                        // --- Show QR and Bottom GIF ---
+                        console.log("Showing QR code container and bottom GIF container...");
+                        qrCodeContainer.classList.remove('hidden'); // Show QR container
+                        bottomGifContainer.classList.remove('hidden'); // Show bottom GIF container
+
+                    } catch (error) {
+                        console.error("Error during QR generation:", error);
+                        alert("Could not generate QR Code. Check console.");
+                        displayArea.classList.add('hidden'); // Hide area on error
+                        qrPlaceholder.style.display = 'block';
+                        bottomGifContainer.classList.add('hidden'); // Ensure bottom GIF is hidden on error
+                    }
+                });
+
+                // Input formatting/validation
+                amountInput.addEventListener('input', function (e) {
+                    this.value = this.value.replace(/[^0-9.]/g, '');
+                    const parts = this.value.split('.');
+                    if (parts.length > 2) { this.value = parts[0] + '.' + parts.slice(1).join(''); }
+                    if (parts[1] && parts[1].length > 2) { this.value = parts[0] + '.' + parts[1].substring(0, 2); }
+                });
+
+                console.log("Initial page setup complete.");
+            });
+        } catch (globalError) {
+            console.error("!!! GLOBAL JAVASCRIPT ERROR !!!", globalError);
+            alert("A critical error occurred loading the page script.");
+        }
+    </script>
+
+</body>
+</html>
